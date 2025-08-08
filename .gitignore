@@ -1,0 +1,7 @@
+/bin/
+
+# Node
+/node_modules/
+
+# IDE
+.vscode/
