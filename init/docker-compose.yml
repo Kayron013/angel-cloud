@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     environment:
       N8N_SECURE_COOKIE: false
-      WEBHOOK_URL: https://n8n.angelcampbell.com
+      WEBHOOK_URL: __N8N_HOST__
 
 volumes:
   n8n_data:

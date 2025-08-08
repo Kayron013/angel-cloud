@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as oci from '@pulumi/oci';
 import { Config } from '@pulumi/pulumi';
+import { env } from './env';
 
 const customConfig = new Config('angel');
 
@@ -112,7 +113,9 @@ const dockerComposeContent = fs.readFileSync('./init/docker-compose.yml', 'utf-8
 
 const cloudInitScript = fs
   .readFileSync('./init/init-script.sh', 'utf-8')
-  .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent);
+  .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent)
+  .replace('__N8N_HOST__', env.N8N_HOST)
+  .replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN);
 
 // Compute Instance
 const instance = new oci.core.Instance('angel-instance', {

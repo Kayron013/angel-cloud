@@ -2,11 +2,13 @@
   "name": "angel-cloud",
   "main": "index.ts",
   "devDependencies": {
+    "@types/dotenv": "^8.2.3",
     "@types/node": "^18",
     "typescript": "^5.0.0"
   },
   "dependencies": {
     "@pulumi/oci": "0.13.0",
-    "@pulumi/pulumi": "^3.113.0"
+    "@pulumi/pulumi": "^3.113.0",
+    "dotenv": "^17.2.1"
   }
 }

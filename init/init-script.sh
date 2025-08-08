@@ -46,9 +46,11 @@ export PATH="/usr/local/bin:$PATH"
 # Enable and start podman socket
 systemctl enable --now podman.socket
 
-#
-# n8n Setup
-#
+########################################################
+##
+## n8n Setup
+##
+########################################################
 
 log "Starting n8n setup..."
 
@@ -69,3 +71,30 @@ firewall-cmd --permanent --add-port=5678/tcp
 firewall-cmd --reload
 
 log "n8n setup completed successfully!"
+
+########################################################
+##
+# DuckDNS Setup
+##
+########################################################
+
+log "Setting up DuckDNS..."
+
+mkdir /opt/duckdns
+cd /opt/duckdns
+
+# Write the duck.sh script
+cat <<'EOF' > duck.sh
+echo url="https://www.duckdns.org/update?domains=kayron013-n8n&token=__DUCK_DNS_TOKEN__&ip=" | curl -k -o ~/opt/duckdns/duck.log -K -
+EOF
+
+# Make the script executable
+chmod 700 duck.sh
+
+# Add to crontab
+(crontab -l 2>/dev/null; echo "*/5 * * * * /opt/duckdns/duck.sh") | crontab -
+
+# Run the script
+/opt/duckdns/duck.sh
+
+log "DuckDNS setup completed successfully!"
