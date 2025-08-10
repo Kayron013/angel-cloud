@@ -1,9 +1,7 @@
 import * as fs from 'fs';
 import * as oci from '@pulumi/oci';
-import { Config } from '@pulumi/pulumi';
+import * as command from '@pulumi/command';
 import { env } from './env';
-
-const customConfig = new Config('angel');
 
 const angelCompartment = new oci.identity.Compartment('angel-cloud', {
   name: 'angel-cloud',
@@ -64,8 +62,8 @@ const securityList = new oci.core.SecurityList('angel-security-list', {
       source: '0.0.0.0/0',
       sourceType: 'CIDR_BLOCK',
       tcpOptions: {
-        min: 5678,
-        max: 5678,
+        min: parseInt(env.N8N_PORT),
+        max: parseInt(env.N8N_PORT),
       },
     },
   ],
@@ -114,7 +112,8 @@ const dockerComposeContent = fs.readFileSync('./init/docker-compose.yml', 'utf-8
 const cloudInitScript = fs
   .readFileSync('./init/init-script.sh', 'utf-8')
   .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent)
-  .replace('__N8N_HOST__', env.N8N_HOST)
+  .replace('__N8N_WEBHOOK_URL__', env.N8N_WEBHOOK_URL)
+  .replace('__N8N_PORT__', env.N8N_PORT)
   .replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN);
 
 // Compute Instance
@@ -135,10 +134,46 @@ const instance = new oci.core.Instance('angel-instance', {
     sourceId: imageOcid,
   },
   metadata: {
-    ssh_authorized_keys: customConfig.require('sshPublicKey'),
+    ssh_authorized_keys: env.SSH_PUBLIC_KEY,
     user_data: Buffer.from(cloudInitScript).toString('base64'),
   },
 });
+
+// Volume
+const volume = new oci.core.Volume('angel-volume', {
+  compartmentId,
+  availabilityDomain: availabilityDomain.name,
+  sizeInGbs: '100',
+  displayName: 'Angel Volume',
+});
+
+// Attach Volume
+const volumeAttachment = new oci.core.VolumeAttachment('angel-volume-attachment', {
+  instanceId: instance.id,
+  volumeId: volume.id,
+  attachmentType: 'paravirtualized',
+  device: '/dev/oracleoci/oraclevdb',
+});
+
+// Wait for cloud-init to complete on the instance before finishing the deployment
+const sshPrivateKey = fs.readFileSync(env.SSH_PRIVATE_KEY_PATH, 'utf8');
+
+const awaitForCloudInit = new command.remote.Command(
+  'await-cloud-init',
+  {
+    connection: {
+      host: instance.publicIp,
+      user: 'opc',
+      privateKey: sshPrivateKey,
+    },
+    create: 'sudo cloud-init status --wait',
+    triggers: [instance.id], // Re-run when instance ID changes
+  },
+  {
+    dependsOn: [instance, volumeAttachment],
+    customTimeouts: { create: '10m' },
+  }
+);
 
 // Outputs
 export const publicIp = instance.publicIp;

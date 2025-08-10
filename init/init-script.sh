@@ -1,4 +1,11 @@
 #!/bin/bash
+
+########################################################
+##
+## General Setup
+##
+########################################################
+
 set -e  # Exit on any error
 
 # Ensure latest packages
@@ -48,6 +55,38 @@ systemctl enable --now podman.socket
 
 ########################################################
 ##
+## Attach Volume
+##
+########################################################
+
+DEVICE=/dev/oracleoci/oraclevdb
+MOUNT_POINT=/opt/n8n-data
+
+# Wait for the device to appear (up to ~2 min)
+for _ in $(seq 1 60); do
+  [ -e "$DEVICE" ] && break
+  sleep 2
+done
+if [ ! -e "$DEVICE" ]; then
+  echo "Device $DEVICE not found" >&2
+  exit 1
+fi
+
+# Format if not already formatted
+if ! blkid -o value -s TYPE "$DEVICE" >/dev/null 2>&1; then
+  mkfs.xfs -f "$DEVICE"
+fi
+
+# Mount and persist via UUID
+mkdir -p "$MOUNT_POINT"
+UUID=$(blkid -s UUID -o value "$DEVICE")
+if ! grep -q "UUID=$UUID " /etc/fstab; then
+  echo "UUID=$UUID $MOUNT_POINT xfs defaults,nofail 0 2" >> /etc/fstab
+fi
+mount -a
+
+########################################################
+##
 ## n8n Setup
 ##
 ########################################################
@@ -85,7 +124,7 @@ cd /opt/duckdns
 
 # Write the duck.sh script
 cat <<'EOF' > duck.sh
-echo url="https://www.duckdns.org/update?domains=kayron013-n8n&token=__DUCK_DNS_TOKEN__&ip=" | curl -k -o ~/opt/duckdns/duck.log -K -
+echo url="https://www.duckdns.org/update?domains=kayron013-n8n&token=__DUCK_DNS_TOKEN__&ip=" | curl -k -o /opt/duckdns/duck.log -K -
 EOF
 
 # Make the script executable

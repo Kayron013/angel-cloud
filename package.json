@@ -7,6 +7,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@pulumi/command": "^1.1.0",
     "@pulumi/oci": "0.13.0",
     "@pulumi/pulumi": "^3.113.0",
     "dotenv": "^17.2.1"
