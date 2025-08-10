@@ -116,29 +116,6 @@ const cloudInitScript = fs
   .replace('__N8N_PORT__', env.N8N_PORT)
   .replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN);
 
-// Compute Instance
-const instance = new oci.core.Instance('angel-instance', {
-  compartmentId,
-  availabilityDomain: availabilityDomain.name,
-  shape: 'VM.Standard.E5.Flex',
-  shapeConfig: {
-    ocpus: 1,
-    memoryInGbs: 8,
-  },
-  displayName: 'Angel Instance',
-  createVnicDetails: {
-    subnetId: subnet.id,
-  },
-  sourceDetails: {
-    sourceType: 'image',
-    sourceId: imageOcid,
-  },
-  metadata: {
-    ssh_authorized_keys: env.SSH_PUBLIC_KEY,
-    user_data: Buffer.from(cloudInitScript).toString('base64'),
-  },
-});
-
 // Volume
 const volume = new oci.core.Volume('angel-volume', {
   compartmentId,
@@ -147,13 +124,48 @@ const volume = new oci.core.Volume('angel-volume', {
   displayName: 'Angel Volume',
 });
 
+// Compute Instance
+const instance = new oci.core.Instance(
+  'angel-instance',
+  {
+    compartmentId,
+    availabilityDomain: availabilityDomain.name,
+    shape: 'VM.Standard.E5.Flex',
+    shapeConfig: {
+      ocpus: 1,
+      memoryInGbs: 8,
+    },
+    displayName: 'Angel Instance',
+    createVnicDetails: {
+      subnetId: subnet.id,
+    },
+    sourceDetails: {
+      sourceType: 'image',
+      sourceId: imageOcid,
+    },
+    metadata: {
+      ssh_authorized_keys: env.SSH_PUBLIC_KEY,
+      user_data: Buffer.from(cloudInitScript).toString('base64'),
+    },
+  },
+  {
+    deleteBeforeReplace: true,
+  }
+);
+
 // Attach Volume
-const volumeAttachment = new oci.core.VolumeAttachment('angel-volume-attachment', {
-  instanceId: instance.id,
-  volumeId: volume.id,
-  attachmentType: 'paravirtualized',
-  device: '/dev/oracleoci/oraclevdb',
-});
+const volumeAttachment = new oci.core.VolumeAttachment(
+  'angel-volume-attachment',
+  {
+    instanceId: instance.id,
+    volumeId: volume.id,
+    attachmentType: 'paravirtualized',
+    device: '/dev/oracleoci/oraclevdb',
+  },
+  {
+    deleteBeforeReplace: true,
+  }
+);
 
 // Wait for cloud-init to complete on the instance before finishing the deployment
 const sshPrivateKey = fs.readFileSync(env.SSH_PRIVATE_KEY_PATH, 'utf8');
@@ -167,7 +179,7 @@ const awaitForCloudInit = new command.remote.Command(
       privateKey: sshPrivateKey,
     },
     create: 'sudo cloud-init status --wait',
-    triggers: [instance.id], // Re-run when instance ID changes
+    triggers: [instance.id],
   },
   {
     dependsOn: [instance, volumeAttachment],

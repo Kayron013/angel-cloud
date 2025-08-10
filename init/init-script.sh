@@ -85,6 +85,19 @@ if ! grep -q "UUID=$UUID " /etc/fstab; then
 fi
 mount -a
 
+# Ensure proper permissions for n8n data directory
+chown -R 1000:1000 "$MOUNT_POINT"  # n8n runs as user 1000
+chmod -R 755 "$MOUNT_POINT"
+
+# Check if n8n data already exists and preserve it
+if [ -d "$MOUNT_POINT/.n8n" ]; then
+    log "Existing n8n data found, preserving..."
+    # Ensure the data is owned by the n8n user
+    chown -R 1000:1000 "$MOUNT_POINT/.n8n"
+else
+    log "No existing n8n data found, will create fresh installation"
+fi
+
 ########################################################
 ##
 ## n8n Setup
