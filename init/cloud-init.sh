@@ -1,13 +1,23 @@
 #!/bin/bash
-set -e  # Exit on any error
 
-# Ensure latest packages
-dnf -y update
+########################################################
+##
+## System Setup (Cloud-init)
+##
+########################################################
+
+set -e  # Exit on any error
 
 # Function to log messages
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
+
+log "Starting system setup..."
+
+# Ensure latest packages
+log "Updating system packages..."
+dnf -y update
 
 # Configure SELinux for containers
 log "Configuring SELinux for containers..."
@@ -30,12 +40,12 @@ for i in {1..3}; do
     fi
 done
 
-# Ensure critical podman dependencies are present (this was the main issue)
+# Ensure critical podman dependencies are present
 log "Installing podman dependencies..."
-dnf install -y crun conmon containers-common || true  # || true prevents script failure if already installed
-
+dnf install -y crun conmon containers-common || true
 
 # Install podman-compose
+log "Installing podman-compose..."
 dnf install -y python3-pip
 pip3 install podman-compose
 log "podman-compose installed successfully"
@@ -44,28 +54,7 @@ log "podman-compose installed successfully"
 export PATH="/usr/local/bin:$PATH"
 
 # Enable and start podman socket
+log "Enabling podman socket..."
 systemctl enable --now podman.socket
 
-#
-# n8n Setup
-#
-
-log "Starting n8n setup..."
-
-# Create n8n app directory
-mkdir -p /opt/n8n
-cd /opt/n8n
-
-# Write the compose file
-cat <<'EOF' > docker-compose.yaml
-__DOCKER_COMPOSE_CONTENT__
-EOF
-
-# Run the container
-podman-compose up -d
-
-# Allow n8n port
-firewall-cmd --permanent --add-port=5678/tcp
-firewall-cmd --reload
-
-log "n8n setup completed successfully!"
+log "System setup completed successfully!"
