@@ -124,7 +124,10 @@ const n8nDeploymentScript = fs
   .readFileSync('./init/n8n.sh', 'utf-8')
   .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent);
 
-const duckdnsScript = fs.readFileSync('./init/duckdns.sh', 'utf-8').replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN);
+const duckdnsScript = fs
+  .readFileSync('./init/duckdns.sh', 'utf-8')
+  .replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN)
+  .replace('__DUCK_DNS_DOMAIN__', env.DUCK_DNS_DOMAIN);
 
 // Volume
 const volume = new oci.core.Volume('angel-volume', {

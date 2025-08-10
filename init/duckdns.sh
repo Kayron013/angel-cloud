@@ -21,7 +21,7 @@ cd /opt/duckdns
 # Write the duck.sh script
 log "Creating DuckDNS update script..."
 cat <<'EOF' > duck.sh
-echo url="https://www.duckdns.org/update?domains=kayron013-n8n&token=__DUCK_DNS_TOKEN__&ip=" | curl -k -o /opt/duckdns/duck.log -K -
+echo url="https://www.duckdns.org/update?domains=__DUCK_DNS_DOMAIN__&token=__DUCK_DNS_TOKEN__&ip=" | curl -k -o /opt/duckdns/duck.log -K -
 EOF
 
 # Make the script executable
