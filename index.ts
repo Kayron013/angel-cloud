@@ -106,15 +106,25 @@ const availabilityDomain = compartmentId
   )
   .apply(ad => ad.availabilityDomains[0]);
 
-// Init Script
-const dockerComposeContent = fs.readFileSync('./init/docker-compose.yml', 'utf-8');
+const cloudInitScript = fs.readFileSync('./init/cloud-init.sh', 'utf-8');
 
-const cloudInitScript = fs
-  .readFileSync('./init/init-script.sh', 'utf-8')
-  .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent)
-  .replace('__N8N_WEBHOOK_URL__', env.N8N_WEBHOOK_URL)
-  .replace('__N8N_PORT__', env.N8N_PORT)
-  .replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN);
+// Script contents for Pulumi commands
+const device = '/dev/oracleoci/oraclevdb';
+const mountPoint = '/opt/n8n-data';
+const volumeMountScript = fs
+  .readFileSync('./init/volume-mount.sh', 'utf-8')
+  .replace('__DEVICE__', device)
+  .replace('__MOUNT_POINT__', mountPoint);
+
+const dockerComposeContent = fs
+  .readFileSync('./init/docker-compose.yml', 'utf-8')
+  .replace('__MOUNT_POINT__', mountPoint);
+
+const n8nDeploymentScript = fs
+  .readFileSync('./init/n8n.sh', 'utf-8')
+  .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent);
+
+const duckdnsScript = fs.readFileSync('./init/duckdns.sh', 'utf-8').replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN);
 
 // Volume
 const volume = new oci.core.Volume('angel-volume', {
@@ -160,7 +170,7 @@ const volumeAttachment = new oci.core.VolumeAttachment(
     instanceId: instance.id,
     volumeId: volume.id,
     attachmentType: 'paravirtualized',
-    device: '/dev/oracleoci/oraclevdb',
+    device: device,
   },
   {
     deleteBeforeReplace: true,
@@ -182,8 +192,62 @@ const awaitForCloudInit = new command.remote.Command(
     triggers: [instance.id],
   },
   {
-    dependsOn: [instance, volumeAttachment],
+    dependsOn: [instance],
     customTimeouts: { create: '10m' },
+  }
+);
+
+// Volume Mount Command
+const volumeMount = new command.remote.Command(
+  'volume-mount',
+  {
+    connection: {
+      host: instance.publicIp,
+      user: 'opc',
+      privateKey: sshPrivateKey,
+    },
+    create: `cat > /tmp/volume-mount.sh << 'SCRIPT_END'\n${volumeMountScript}\nSCRIPT_END\nsudo bash /tmp/volume-mount.sh`,
+    triggers: [instance.id, volumeAttachment.id],
+  },
+  {
+    dependsOn: [volumeAttachment],
+    customTimeouts: { create: '5m' },
+  }
+);
+
+// n8n Deployment Command
+const n8nDeployment = new command.remote.Command(
+  'n8n-deployment',
+  {
+    connection: {
+      host: instance.publicIp,
+      user: 'opc',
+      privateKey: sshPrivateKey,
+    },
+    create: `cat > /tmp/n8n-deployment.sh << 'SCRIPT_END'\n${n8nDeploymentScript}\nSCRIPT_END\nsudo bash /tmp/n8n-deployment.sh`,
+    triggers: [instance.id, dockerComposeContent],
+  },
+  {
+    dependsOn: [awaitForCloudInit, volumeMount],
+    customTimeouts: { create: '5m' },
+  }
+);
+
+// DuckDNS Setup Command (can run in parallel with n8n)
+const duckdnsSetup = new command.remote.Command(
+  'duckdns-setup',
+  {
+    connection: {
+      host: instance.publicIp,
+      user: 'opc',
+      privateKey: sshPrivateKey,
+    },
+    create: `cat > /tmp/duckdns-setup.sh << 'SCRIPT_END'\n${duckdnsScript}\nSCRIPT_END\nsudo bash /tmp/duckdns-setup.sh`,
+    triggers: [instance.id, env.DUCK_DNS_TOKEN],
+  },
+  {
+    dependsOn: [],
+    customTimeouts: { create: '2m' },
   }
 );
 
