@@ -118,7 +118,8 @@ const volumeMountScript = fs
 
 const dockerComposeContent = fs
   .readFileSync('./init/docker-compose.yml', 'utf-8')
-  .replace('__MOUNT_POINT__', mountPoint);
+  .replace('__MOUNT_POINT__', mountPoint)
+  .replace('__N8N_WEBHOOK_URL__', env.N8N_WEBHOOK_URL);
 
 const n8nDeploymentScript = fs
   .readFileSync('./init/n8n.sh', 'utf-8')
