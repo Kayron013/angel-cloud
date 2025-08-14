@@ -9,4 +9,6 @@ export const env = {
   N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL!,
   SSH_PUBLIC_KEY: process.env.SSH_PUBLIC_KEY!,
   SSH_PRIVATE_KEY_PATH: process.env.SSH_PRIVATE_KEY_PATH!,
+  VOLUME_MOUNT_POINT: '/opt/n8n-data',
+  VOLUME_DEVICE: '/dev/oracleoci/oraclevdb',
 };

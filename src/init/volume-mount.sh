@@ -15,8 +15,8 @@ log() {
 
 log "Starting volume setup..."
 
-DEVICE=__DEVICE__
-MOUNT_POINT=__MOUNT_POINT__
+DEVICE=__VOLUME_DEVICE__
+MOUNT_POINT=__VOLUME_MOUNT_POINT__
 
 # Wait for the device to appear (up to ~2 min)
 log "Waiting for volume device to appear..."

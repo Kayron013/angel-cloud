@@ -2,7 +2,7 @@
   "compilerOptions": {
     "strict": true,
     "outDir": "bin",
-    "target": "es2020",
+    "target": "esnext",
     "module": "commonjs",
     "moduleResolution": "node",
     "sourceMap": true,
@@ -12,5 +12,5 @@
     "noImplicitReturns": true,
     "forceConsistentCasingInFileNames": true
   },
-  "files": ["index.ts"]
+  "files": ["src/index.ts"]
 }
