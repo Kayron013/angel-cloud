@@ -4,7 +4,7 @@ services:
     container_name: n8n
     network_mode: host
     volumes:
-      - __MOUNT_POINT__:/home/node/.n8n
+      - __VOLUME_MOUNT_POINT__:/home/node/.n8n
     restart: unless-stopped
     environment:
       N8N_SECURE_COOKIE: false

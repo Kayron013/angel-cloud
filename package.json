@@ -1,6 +1,6 @@
 {
   "name": "angel-cloud",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "devDependencies": {
     "@types/dotenv": "^8.2.3",
     "@types/node": "^18",

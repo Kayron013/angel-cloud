@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as oci from '@pulumi/oci';
 import * as command from '@pulumi/command';
 import { env } from './env';
+import { readScript } from './utils';
 
 const angelCompartment = new oci.identity.Compartment('angel-cloud', {
   name: 'angel-cloud',
@@ -106,29 +107,13 @@ const availabilityDomain = compartmentId
   )
   .apply(ad => ad.availabilityDomains[0]);
 
-const cloudInitScript = fs.readFileSync('./init/cloud-init.sh', 'utf-8');
+const cloudInitScript = readScript('./init/cloud-init.sh');
 
 // Script contents for Pulumi commands
-const device = '/dev/oracleoci/oraclevdb';
-const mountPoint = '/opt/n8n-data';
-const volumeMountScript = fs
-  .readFileSync('./init/volume-mount.sh', 'utf-8')
-  .replace('__DEVICE__', device)
-  .replace('__MOUNT_POINT__', mountPoint);
-
-const dockerComposeContent = fs
-  .readFileSync('./init/docker-compose.yml', 'utf-8')
-  .replace('__MOUNT_POINT__', mountPoint)
-  .replace('__N8N_WEBHOOK_URL__', env.N8N_WEBHOOK_URL);
-
-const n8nDeploymentScript = fs
-  .readFileSync('./init/n8n.sh', 'utf-8')
-  .replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent);
-
-const duckdnsScript = fs
-  .readFileSync('./init/duckdns.sh', 'utf-8')
-  .replace('__DUCK_DNS_TOKEN__', env.DUCK_DNS_TOKEN)
-  .replace('__DUCK_DNS_DOMAIN__', env.DUCK_DNS_DOMAIN);
+const volumeMountScript = readScript('./init/volume-mount.sh');
+const duckdnsScript = readScript('./init/duckdns.sh');
+const dockerComposeContent = readScript('./init/docker-compose.yml');
+const n8nDeploymentScript = readScript('./init/n8n.sh').replace('__DOCKER_COMPOSE_CONTENT__', dockerComposeContent);
 
 // Volume
 const volume = new oci.core.Volume('angel-volume', {
@@ -174,7 +159,7 @@ const volumeAttachment = new oci.core.VolumeAttachment(
     instanceId: instance.id,
     volumeId: volume.id,
     attachmentType: 'paravirtualized',
-    device: device,
+    device: env.VOLUME_DEVICE,
   },
   {
     deleteBeforeReplace: true,
