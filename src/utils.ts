@@ -15,6 +15,6 @@ const envMap = Object.entries(env).reduce((acc, [key, value]) => {
 
 const replaceEnvVars = (script: string) => {
   return Object.entries(envMap).reduce((acc, [key, value]) => {
-    return acc.replace(key, value);
+    return acc.replaceAll(key, value);
   }, script);
 };
